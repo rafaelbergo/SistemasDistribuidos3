@@ -1,14 +1,10 @@
 ﻿using Foundation;
+using Foundation.Keys;
 using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
 
 namespace MS.Principal.Services;
-
-public class KeyConfig
-{
-    public string PrivateKeyPath { get; set; } = string.Empty;
-}
 
 public class RabbitMqPublisher
 {

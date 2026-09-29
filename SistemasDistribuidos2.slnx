@@ -5,8 +5,8 @@
   </Folder>
   <Folder Name="/Services/">
     <Project Path="MS.Entrega/MS.Entrega.csproj" />
-    <Project Path="MS.Estoque/MS.Estoque.csproj" />
-    <Project Path="MS.Pagamento/MS.Pagamento.csproj" />
+    <Project Path="MS.Estoque/MS.Estoque.csproj" Id="6f14933e-a462-4626-83cc-ad14ebb67855" />
+    <Project Path="MS.Pagamento/MS.Pagamento.csproj" Id="192c5df4-7943-4549-8275-13c4795baeef" />
     <Project Path="MS.Promocoes/MS.Promocoes.csproj" />
   </Folder>
   <Project Path="Foundation/Foundation.csproj" />

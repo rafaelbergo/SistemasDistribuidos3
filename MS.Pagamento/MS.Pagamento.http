@@ -1,0 +1,6 @@
+@MS.Pagamento_HostAddress = http://localhost:5207
+
+GET {{MS.Pagamento_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -84,7 +84,7 @@ public class PagamentoConsumerService : BackgroundService
 
                 var mockRequest = new SolicitacaoPagamentoMock(
                     PedidoId: eventMessage.Content.Id,
-                    ValorTotal: 100.00m,
+                    ValorTotal: eventMessage.Content.ValorTotal,
                     WebhookUrl: myWebhookUrl
                 );
 

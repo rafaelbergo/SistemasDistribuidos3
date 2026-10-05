@@ -1,6 +1,6 @@
 using Foundation;
 using Foundation.Keys;
-using MS.Principal.Services;
+using MS.Pagamento.Services;
 using RabbitMQ.Client;
 using Scalar.AspNetCore;
 

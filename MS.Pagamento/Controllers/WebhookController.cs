@@ -1,4 +1,5 @@
 ﻿using Foundation.Models;
+using Foundation.Services;
 using Microsoft.AspNetCore.Mvc;
 using MS.Pagamento.Services;
 

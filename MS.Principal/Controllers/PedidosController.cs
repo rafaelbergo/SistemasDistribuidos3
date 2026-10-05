@@ -1,6 +1,7 @@
 ﻿using Foundation.Models;
+using Foundation.Services;
 using Microsoft.AspNetCore.Mvc;
-using MS.Pagamento.Services;
+using System.Text.Json;
 
 namespace MS.Principal.Controllers;
 
@@ -9,10 +10,13 @@ namespace MS.Principal.Controllers;
 public class PedidosController : ControllerBase
 {
     private readonly RabbitMqPublisher _rabbitPublisher;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-    public PedidosController(RabbitMqPublisher rabbitPublisher)
+    public PedidosController(RabbitMqPublisher rabbitPublisher, IHttpClientFactory httpClientFactory)
     {
         _rabbitPublisher = rabbitPublisher;
+        _httpClientFactory = httpClientFactory;
     }
 
     [HttpPost]
@@ -20,39 +24,63 @@ public class PedidosController : ControllerBase
     {
         if (request.Itens == null || !request.Itens.Any())
         {
-            return BadRequest("Order must have at least one item");
+            return BadRequest("Order must contain at least one item");
         }
 
-        // Create random OrderId
-        string pedidoId = Guid.NewGuid().ToString("N");
+        var client = _httpClientFactory.CreateClient("EstoqueClient");
+        decimal totalValue = 0;
+        var itensPedido = new List<ItemPedido>();
 
-        // Create list of items based on request items
-        var itensPedido = request.Itens.Select(i => new ItemPedido
+        // Check each item
+        foreach (var reqItem in request.Itens)
         {
-            Id = i.Id,
-            Quantidade = i.Quantidade
-        }).ToList();
+            var response = await client.GetAsync($"/api/produtos/{reqItem.Id}");
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)        
+                return BadRequest($"Product {reqItem.Id} not found");
+            
+            if (!response.IsSuccessStatusCode)         
+                return StatusCode(500, "Error on validate product, invalid response");
 
-        decimal valorTotalCalculado = itensPedido.Sum(i => i.Quantidade * 1.0m);
+            var productJson = await response.Content.ReadAsStringAsync();
+            var product = JsonSerializer.Deserialize<ProdutoCatalogoDto>(productJson, _jsonOptions);
+            if (product == null)
+                return StatusCode(500, $"Error on get product {reqItem.Id}");
+
+            totalValue += product.Preco * reqItem.Quantidade;
+
+            itensPedido.Add(new ItemPedido
+            {
+                Id = reqItem.Id,
+                Quantidade = reqItem.Quantidade,
+                Preco = product.Preco
+            });
+        }
+
+        string pedidoId = Guid.NewGuid().ToString("N");
 
         var pedido = new PedidoCriado
         {
             Id = pedidoId,
             ClienteId = request.ClienteId,
             Itens = itensPedido,
-            ValorTotal = valorTotalCalculado
+            ValorTotal = totalValue
         };
 
         try
         {
             await _rabbitPublisher.PublishEventAsync(pedido, "pedido.criado");
 
-            return Accepted(new { mensagem = "Order received, processing started.", id = pedidoId });
+            return Accepted(new
+            {
+                mensagem = "Order created and sent to processing",
+                pedidoId = pedidoId,
+                totalValue = totalValue
+            });
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MS.Principal] Error on publish order: {ex.Message}");
-            return StatusCode(500, "Error on publish order: " + ex.Message);
+            Console.WriteLine($"[MS.Principal] Error on publish event: {ex.Message}");
+            return StatusCode(500, $"Error on publish new order event: {ex.Message}");
         }
     }
 }

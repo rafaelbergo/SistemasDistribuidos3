@@ -32,4 +32,23 @@ public class ProdutosController : ControllerBase
             return Ok(catalogo);
         }
     }
+
+    [HttpGet("{id}")]
+    public IActionResult GetProduto(string id)
+    {
+        lock (_estoqueManager.InventoryLock)
+        {
+            if (_estoqueManager.Inventory.TryGetValue(id, out var produto))
+            {
+                return Ok(new
+                {
+                    Id = id,
+                    Descricao = $"Produto {id}",
+                    QuantidadeDisponivel = produto.Quantidade,
+                    Preco = produto.Preco
+                });
+            }
+            return NotFound();
+        }
+    }
 }

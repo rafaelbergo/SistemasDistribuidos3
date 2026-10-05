@@ -4,7 +4,7 @@ using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
 
-namespace MS.Pagamento.Services;
+namespace Foundation.Services;
 
 public class RabbitMqPublisher
 {

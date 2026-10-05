@@ -12,4 +12,5 @@ public class ItemPedido
 {
     public string Id { get; set; } = string.Empty;
     public int Quantidade { get; set; } = 1;
+    public decimal Preco { get; set; } = 0;
 }

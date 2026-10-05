@@ -1,6 +1,6 @@
 using Foundation;
 using Foundation.Keys;
-using MS.Pagamento.Services;
+using Foundation.Services;
 using RabbitMQ.Client;
 using Scalar.AspNetCore;
 
@@ -16,7 +16,7 @@ string privateKeyPath = Path.Combine(solutionRootPath, "MS.Principal", "Keys", "
 builder.Services.AddSingleton(signature);
 builder.Services.AddSingleton(new KeyConfig
 {
-    ProducerName = "MS.Principal"
+    ProducerName = "MS.Principal",
     PrivateKeyPath = privateKeyPath,
     SolutionRootPath = solutionRootPath,
 });

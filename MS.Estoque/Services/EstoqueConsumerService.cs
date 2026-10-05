@@ -88,13 +88,13 @@ public class EstoqueConsumerService : BackgroundService
                         return;
 
                     itemsAvailable = eventMessage.Content.Itens.All(item =>
-                        _estoqueManager.Inventory.TryGetValue(item.Id, out int available) && available >= item.Quantidade);
-
+                        _estoqueManager.Inventory.TryGetValue(item.Id, out var produto) && produto.Quantidade >= item.Quantidade);
+                    
                     if (itemsAvailable)
                     {
                         foreach (var item in eventMessage.Content.Itens)
                         {
-                            _estoqueManager.Inventory[item.Id] -= item.Quantidade;
+                            _estoqueManager.Inventory[item.Id].Quantidade -= item.Quantidade;
                             Console.WriteLine($"[MS.Estoque] Removed {item.Quantidade} of item {item.Id} , Remaining: {_estoqueManager.Inventory[item.Id]}");
                         }
                         _estoqueManager.Reservations[eventMessage.Content.Id] = eventMessage.Content.Itens;
@@ -125,7 +125,7 @@ public class EstoqueConsumerService : BackgroundService
                         foreach (var item in reservedItems)
                         {
                             if (_estoqueManager.Inventory.ContainsKey(item.Id))
-                                _estoqueManager.Inventory[item.Id] += item.Quantidade;
+                                _estoqueManager.Inventory[item.Id].Quantidade += item.Quantidade;
                         }
                         _estoqueManager.SaveInventory();
                     }

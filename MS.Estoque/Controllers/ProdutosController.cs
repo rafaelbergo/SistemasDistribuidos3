@@ -25,7 +25,8 @@ public class ProdutosController : ControllerBase
                 {
                     Id = item.Key,
                     Descricao = $"Produto {item.Key}",
-                    QuantidadeDisponivel = item.Value
+                    QuantidadeDisponivel = item.Value.Quantidade,
+                    Preco = item.Value.Preco
                 }).ToList();
 
             return Ok(catalogo);

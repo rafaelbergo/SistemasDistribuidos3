@@ -14,7 +14,12 @@ keyManagement.CheckKeys();
 var signature = new SignatureService();
 string privateKeyPath = Path.Combine(solutionRootPath, "MS.Principal", "Keys", "MS.Principal.private.pem");
 builder.Services.AddSingleton(signature);
-builder.Services.AddSingleton(new KeyConfig { PrivateKeyPath = privateKeyPath });
+builder.Services.AddSingleton(new KeyConfig
+{
+    ProducerName = "MS.Principal"
+    PrivateKeyPath = privateKeyPath,
+    SolutionRootPath = solutionRootPath,
+});
 
 var factory = new ConnectionFactory { HostName = "localhost" };
 var rabbitConnection = await factory.CreateConnectionAsync();

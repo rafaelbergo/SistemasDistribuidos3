@@ -21,6 +21,11 @@ var rabbitConnection = await factory.CreateConnectionAsync();
 builder.Services.AddSingleton(rabbitConnection);
 builder.Services.AddScoped<RabbitMqPublisher>();
 
+builder.Services.AddHttpClient("EstoqueClient", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7072/");
+});
+
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();

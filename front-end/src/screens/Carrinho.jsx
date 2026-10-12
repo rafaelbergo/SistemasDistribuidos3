@@ -1,8 +1,85 @@
+import { useState } from 'react'
+import { criarPedido } from '../api/client'
 import { useCart } from '../context/CartContext'
+import { useCliente } from '../context/ClienteContext'
+import { usePedidos } from '../context/PedidosContext'
 import { formatBRL } from '../utils/format'
 
-export default function Carrinho() {
+export default function Carrinho({ navigate }) {
   const { items, setQuantidade, removeItem, clear, totalItens, totalValor } = useCart()
+  const { clienteId, setClienteId } = useCliente()
+  const { addPedido } = usePedidos()
+
+  const [enviando, setEnviando] = useState(false)
+  const [erro, setErro] = useState(null)
+  const [sucesso, setSucesso] = useState(null)
+
+  async function finalizar() {
+    setErro(null)
+    setSucesso(null)
+    const cliente = clienteId.trim()
+    if (!cliente) {
+      setErro('Informe seu e-mail para identificar o pedido.')
+      return
+    }
+
+    setEnviando(true)
+    try {
+      const itensPayload = items.map((i) => ({ id: i.id, quantidade: i.quantidade }))
+      const resp = await criarPedido({ clienteId: cliente, itens: itensPayload })
+      const pedidoId = resp?.pedidoId ?? null
+      const valorTotal = Number.isFinite(resp?.totalValue) ? resp.totalValue : totalValor
+
+      addPedido({
+        pedidoId,
+        clienteId: cliente,
+        valorTotal,
+        itens: items.map((i) => ({ id: i.id, descricao: i.descricao, quantidade: i.quantidade })),
+      })
+      clear()
+      setSucesso({ pedidoId, valorTotal })
+    } catch (e) {
+      setErro(e.message)
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  if (sucesso) {
+    return (
+      <section>
+        <h2 className="mb-4 text-lg font-semibold">Pedido criado</h2>
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+          <p className="font-medium">Seu pedido foi enviado para processamento. ✅</p>
+          <p className="mt-1">
+            Pedido <span className="font-mono">{sucesso.pedidoId ?? '—'}</span> ·{' '}
+            {formatBRL(sucesso.valorTotal)}
+          </p>
+          <p className="mt-2 text-green-700">
+            Acompanhe o status (estoque, pagamento e entrega) em tempo real na aba
+            <strong> Meus Pedidos</strong>. A aba de pagamento abrirá quando o checkout
+            estiver disponível.
+          </p>
+        </div>
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={() => navigate?.('pedidos')}
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Ir para Meus Pedidos
+          </button>
+          <button
+            type="button"
+            onClick={() => setSucesso(null)}
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-100"
+          >
+            Voltar ao carrinho
+          </button>
+        </div>
+      </section>
+    )
+  }
 
   if (items.length === 0) {
     return (
@@ -33,9 +110,7 @@ export default function Carrinho() {
           <li key={item.id} className="flex items-center gap-4 p-4">
             <div className="flex-1">
               <p className="font-medium">{item.descricao ?? `Produto ${item.id}`}</p>
-              <p className="text-sm text-slate-500">
-                {formatBRL(item.preco)} · un.
-              </p>
+              <p className="text-sm text-slate-500">{formatBRL(item.preco)} · un.</p>
             </div>
 
             <div className="flex items-center gap-1">
@@ -85,14 +160,32 @@ export default function Carrinho() {
         </div>
       </div>
 
-      <button
-        type="button"
-        disabled
-        title="Disponível na próxima etapa"
-        className="mt-4 w-full rounded-md bg-slate-300 px-4 py-3 font-medium text-white"
-      >
-        Finalizar pedido (Etapa 4)
-      </button>
+      <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+        <label htmlFor="clienteId" className="block text-sm font-medium text-slate-700">
+          Seu e-mail (identificação do cliente)
+        </label>
+        <input
+          id="clienteId"
+          type="email"
+          value={clienteId}
+          onChange={(e) => setClienteId(e.target.value)}
+          placeholder="cliente@email.com"
+          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+        />
+
+        {erro && (
+          <p className="mt-3 rounded-md bg-red-50 p-2 text-sm text-red-700">{erro}</p>
+        )}
+
+        <button
+          type="button"
+          onClick={finalizar}
+          disabled={enviando}
+          className="mt-4 w-full rounded-md bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+        >
+          {enviando ? 'Enviando…' : 'Finalizar pedido'}
+        </button>
+      </div>
     </section>
   )
 }

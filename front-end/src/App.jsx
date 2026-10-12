@@ -48,7 +48,7 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6">
-        <ActiveComponent />
+        <ActiveComponent navigate={setActive} />
       </main>
     </div>
   )

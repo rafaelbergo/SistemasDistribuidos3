@@ -3,6 +3,7 @@ import Catalogo from './screens/Catalogo'
 import Carrinho from './screens/Carrinho'
 import MeusPedidos from './screens/MeusPedidos'
 import Promocoes from './screens/Promocoes'
+import { useCart } from './context/CartContext'
 
 const TABS = [
   { id: 'catalogo', label: 'Catálogo', Component: Catalogo },
@@ -13,6 +14,7 @@ const TABS = [
 
 export default function App() {
   const [active, setActive] = useState('catalogo')
+  const { totalItens } = useCart()
   const ActiveComponent = TABS.find((t) => t.id === active).Component
 
   return (
@@ -35,6 +37,11 @@ export default function App() {
               }`}
             >
               {tab.label}
+              {tab.id === 'carrinho' && totalItens > 0 && (
+                <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-xs font-semibold text-white">
+                  {totalItens}
+                </span>
+              )}
             </button>
           ))}
         </nav>

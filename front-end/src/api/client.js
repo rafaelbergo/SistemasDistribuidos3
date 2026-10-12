@@ -1,6 +1,8 @@
 // REST + SSE client for the API Gateway (MS.Principal).
-// Base URL comes from VITE_API_URL (see .env), defaulting to the gateway's dev port.
-export const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5059'
+// By default BASE_URL is empty (same origin) so requests hit the Vite dev proxy
+// which forwards /api to the gateway (avoids CORS in dev). Set VITE_API_URL to
+// point directly at a CORS-enabled gateway instead.
+export const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
 export class ApiError extends Error {
   constructor(status, message) {

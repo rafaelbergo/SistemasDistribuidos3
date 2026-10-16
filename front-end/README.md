@@ -3,28 +3,52 @@
 Interface web (React + Vite + Tailwind CSS) que consome o **API Gateway (MS.Principal)**
 via **REST** e **SSE**. Corresponde ao componente *Frontend web* do Trab2.
 
-## Como rodar
+## Como rodar o front-end
 
 ```bash
 npm install
-npm run dev      # servidor de desenvolvimento (Vite)
+npm run dev      # servidor de desenvolvimento (Vite), em http://localhost:5173
 npm run build    # build de produção em dist/
+npm run lint     # oxlint
 ```
 
-A URL do gateway é configurada em `.env`:
+Em dev, o Vite faz **proxy de `/api`** para o gateway (same-origin, sem CORS).
+Veja `.env` / `.env.example`:
 
 ```
-VITE_API_URL=http://localhost:5059
+VITE_API_URL=              # vazio = usa o proxy do Vite (recomendado em dev)
+# VITE_API_URL=http://localhost:5059   # aponta direto no gateway (exige CORS no backend)
+# VITE_GATEWAY_URL=http://localhost:5059   # alvo do proxy (padrão)
 ```
+
+## Rodando o sistema completo (para testar ao vivo)
+
+1. **RabbitMQ:** `docker compose up -d rabbitmq` (na raiz do projeto).
+2. **MS.Estoque** (precisa expor a porta HTTPS 7072, consumida pelo gateway):
+   ```bash
+   dotnet run --project MS.Estoque --launch-profile https
+   ```
+3. **MS.Principal** (gateway). A chamada gateway→estoque é HTTPS; é preciso
+   confiar no dev-cert e informar o `SSL_CERT_DIR` para o `HttpClient`:
+   ```bash
+   dotnet dev-certs https --trust
+   export SSL_CERT_DIR="$HOME/.aspnet/dev-certs/trust:/etc/ssl/certs"
+   dotnet run --project MS.Principal --launch-profile http
+   ```
+   Sem isso, o gateway responde `500 Error on connect to MS.Estoque` (TLS).
+4. **Front-end:** `npm run dev` e abra http://localhost:5173.
+
+> Demais serviços (MS.Pagamento, MS.Entrega, MS.Promocoes, Consumidor.C1/C2)
+> são iniciados do mesmo modo com `dotnet run --project <serviço>`.
 
 ## Funcionalidades (requisitos do PDF)
 
-| Tela          | Requisito                                   | Etapa |
-|---------------|---------------------------------------------|-------|
-| Catálogo      | Consultar produtos disponíveis (REST)       | 3     |
-| Carrinho      | Criar pedido (REST) + abrir aba de pagamento| 3 / 4 |
-| Meus Pedidos  | Acompanhar status em tempo real (SSE)       | 4     |
-| Promoções     | Inscrever/cancelar e-mail por categorias    | 5     |
+| Tela          | Requisito                                   | Status |
+|---------------|---------------------------------------------|--------|
+| Catálogo      | Consultar produtos disponíveis (REST)       | ✅ |
+| Carrinho      | Criar pedido (REST) + abrir aba de pagamento| ✅ |
+| Meus Pedidos  | Acompanhar status em tempo real (SSE)       | ✅ (depende do endpoint SSE no backend) |
+| Promoções     | Inscrever/cancelar e-mail por categorias    | ✅ (depende dos endpoints de interesse no backend) |
 
 ## Contrato da API (Gateway / MS.Principal)
 

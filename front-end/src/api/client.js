@@ -74,7 +74,7 @@ export function cancelarInteresse(email) {
   })
 }
 
-// --- SSE (acompanhamento de pedidos; backend ainda vai expor) ---
+// --- SSE (acompanhamento de pedidos) ---
 
 // GET /api/pedidos/eventos?clienteId=... (text/event-stream)
 export function pedidoEventsUrl(clienteId) {

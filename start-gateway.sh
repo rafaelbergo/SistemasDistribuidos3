@@ -8,6 +8,7 @@
 #   - MS.Estoque sobe em HTTPS (porta 7072), que o MS.Principal consome
 #   - MS.Principal roda com SSL_CERT_DIR para confiar no dev-cert do
 #     MS.Estoque (senão a chamada gateway->estoque falha com erro de TLS)
+#   - Mock.Pagamento (sistema externo de pagamento) sobe em http://localhost:5300
 # O start-services.sh original permanece inalterado.
 # ============================================================
 
@@ -15,6 +16,7 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 SERVICES=(
     "MS.Estoque"
+    "Mock.Pagamento"
     "MS.Pagamento"
     "MS.Promocoes"
     "Consumidor.C1"
@@ -201,5 +203,8 @@ echo
 echo "=========================================="
 echo " Todos os microserviços foram iniciados."
 echo " Catálogo via gateway: http://localhost:5059/api/catalogo"
+echo " SSE via gateway:      http://localhost:5059/api/pedidos/eventos?clienteId=<email>"
+echo " Mock de Pagamento:    http://localhost:5300"
+echo " Para encerrar tudo:   ./start-gateway.sh --stop"
 echo " Frontend (em front-end/): npm run dev  ->  http://localhost:5173"
 echo "=========================================="

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { registrarInteresse, cancelarInteresse } from '../api/client'
 import { useCliente } from '../context/ClienteContext'
+import { isEmailValido } from '../utils/validation'
 
 // Categorias de promoção publicadas pelo MS.Promocoes (routing keys
 // promocao.categoria.A | .B | .C). Os exemplos são ilustrativos.
@@ -26,8 +27,8 @@ export default function Promocoes() {
   async function inscrever() {
     setFeedback(null)
     const mail = email.trim()
-    if (!mail) {
-      setFeedback({ tipo: 'erro', msg: 'Informe um e-mail.' })
+    if (!isEmailValido(mail)) {
+      setFeedback({ tipo: 'erro', msg: 'Informe um e-mail válido (ex.: cliente@email.com).' })
       return
     }
     if (categorias.length === 0) {
@@ -53,8 +54,8 @@ export default function Promocoes() {
   async function cancelar() {
     setFeedback(null)
     const mail = email.trim()
-    if (!mail) {
-      setFeedback({ tipo: 'erro', msg: 'Informe o e-mail para cancelar.' })
+    if (!isEmailValido(mail)) {
+      setFeedback({ tipo: 'erro', msg: 'Informe um e-mail válido para cancelar.' })
       return
     }
 

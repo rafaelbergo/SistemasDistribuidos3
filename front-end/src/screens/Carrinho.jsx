@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext'
 import { useCliente } from '../context/ClienteContext'
 import { usePedidos } from '../context/PedidosContext'
 import { formatBRL } from '../utils/format'
+import { isEmailValido } from '../utils/validation'
 
 export default function Carrinho({ navigate }) {
   const { items, setQuantidade, removeItem, clear, totalItens, totalValor } = useCart()
@@ -20,6 +21,10 @@ export default function Carrinho({ navigate }) {
     const cliente = clienteId.trim()
     if (!cliente) {
       setErro('Informe seu e-mail para identificar o pedido.')
+      return
+    }
+    if (!isEmailValido(cliente)) {
+      setErro('Informe um e-mail válido (ex.: cliente@email.com).')
       return
     }
 

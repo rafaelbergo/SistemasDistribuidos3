@@ -5,6 +5,7 @@ import { usePedidos } from '../context/PedidosContext'
 import { useSSE } from '../hooks/useSSE'
 import { statusLabel, statusStyle } from '../api/status'
 import { formatBRL } from '../utils/format'
+import { isEmailValido } from '../utils/validation'
 
 const CONN = {
   idle: { label: 'Sem conexão', dot: 'bg-slate-400' },
@@ -23,6 +24,17 @@ export default function MeusPedidos() {
   const { clienteId, setClienteId } = useCliente()
   const { pedidos } = usePedidos()
   const [emailInput, setEmailInput] = useState('')
+  const [erroEmail, setErroEmail] = useState(null)
+
+  function acompanhar() {
+    const mail = emailInput.trim()
+    if (!isEmailValido(mail)) {
+      setErroEmail('Informe um e-mail válido (ex.: cliente@email.com).')
+      return
+    }
+    setErroEmail(null)
+    setClienteId(mail)
+  }
 
   const url = clienteId ? pedidoEventsUrl(clienteId) : null
   const { events, status } = useSSE(url, { enabled: Boolean(clienteId) })
@@ -55,21 +67,24 @@ export default function MeusPedidos() {
         <p className="mb-4 text-sm text-slate-500">
           Informe seu e-mail para acompanhar seus pedidos em tempo real.
         </p>
-        <div className="flex max-w-md gap-2">
-          <input
-            type="email"
-            value={emailInput}
-            onChange={(e) => setEmailInput(e.target.value)}
-            placeholder="cliente@email.com"
-            className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-          />
-          <button
-            type="button"
-            onClick={() => emailInput.trim() && setClienteId(emailInput.trim())}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            Acompanhar
-          </button>
+        <div className="max-w-md">
+          <div className="flex gap-2">
+            <input
+              type="email"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              placeholder="cliente@email.com"
+              className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+            <button
+              type="button"
+              onClick={acompanhar}
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              Acompanhar
+            </button>
+          </div>
+          {erroEmail && <p className="mt-2 text-sm text-red-600">{erroEmail}</p>}
         </div>
       </section>
     )

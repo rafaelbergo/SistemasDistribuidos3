@@ -1,6 +1,7 @@
 using Foundation;
 using Foundation.Keys;
 using Foundation.Services;
+using MS.Principal.Services;
 using RabbitMQ.Client;
 using Scalar.AspNetCore;
 
@@ -25,6 +26,9 @@ var factory = new ConnectionFactory { HostName = "localhost" };
 var rabbitConnection = await factory.CreateConnectionAsync();
 builder.Services.AddSingleton(rabbitConnection);
 builder.Services.AddScoped<RabbitMqPublisher>();
+
+builder.Services.AddSingleton<PedidoEventosHub>();
+builder.Services.AddHostedService<PedidoEventosConsumerService>();
 
 builder.Services.AddHttpClient("EstoqueClient", client =>
 {

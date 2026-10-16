@@ -9,6 +9,9 @@
     <Project Path="MS.Pagamento/MS.Pagamento.csproj" Id="192c5df4-7943-4549-8275-13c4795baeef" />
     <Project Path="MS.Promocoes/MS.Promocoes.csproj" />
   </Folder>
+  <Folder Name="/External/">
+    <Project Path="Mock.Pagamento/Mock.Pagamento.csproj" />
+  </Folder>
   <Project Path="Foundation/Foundation.csproj" />
   <Project Path="MS.Principal/MS.Principal.csproj" Id="6b8f028e-e45d-4b18-9da0-3183d00cb7d4" />
 </Solution>

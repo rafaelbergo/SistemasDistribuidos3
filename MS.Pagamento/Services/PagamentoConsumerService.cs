@@ -1,6 +1,7 @@
 ﻿using Foundation;
 using Foundation.Keys;
 using Foundation.Models;
+using Foundation.Services;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
@@ -15,14 +16,16 @@ public class PagamentoConsumerService : BackgroundService
     private readonly KeyConfig _keyConfig;
     private readonly PagamentoManager _pagamentoManager;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public PagamentoConsumerService(IConnection connection, SignatureService signatureService, KeyConfig keyConfig, PagamentoManager pagamentoManager, IHttpClientFactory httpClientFactory)
+    public PagamentoConsumerService(IConnection connection, SignatureService signatureService, KeyConfig keyConfig, PagamentoManager pagamentoManager, IHttpClientFactory httpClientFactory, IServiceScopeFactory scopeFactory)
     {
         _connection = connection;
         _signatureService = signatureService;
         _keyConfig = keyConfig;
         _pagamentoManager = pagamentoManager;
         _httpClientFactory = httpClientFactory;
+        _scopeFactory = scopeFactory;
     }
 
     protected override async Task ExecuteAsync(CancellationToken ct)
@@ -80,7 +83,7 @@ public class PagamentoConsumerService : BackgroundService
 
                 // Call Mock Payment API to create the payment request
                 var client = _httpClientFactory.CreateClient("MockPagamentoClient");
-                string myWebhookUrl = "https://localhost:5000/api/webhook";
+                string myWebhookUrl = "http://localhost:5207/api/webhook";
 
                 var mockRequest = new SolicitacaoPagamentoMock(
                     PedidoId: eventMessage.Content.Id,
@@ -91,9 +94,26 @@ public class PagamentoConsumerService : BackgroundService
                 try
                 {
                     var response = await client.PostAsJsonAsync("/api/cobranca", mockRequest, ct);
-                    if (response.IsSuccessStatusCode)
+                    var cobranca = response.IsSuccessStatusCode
+                        ? await response.Content.ReadFromJsonAsync<CobrancaCriada>(ct)
+                        : null;
+
+                    if (cobranca != null && !string.IsNullOrEmpty(cobranca.CheckoutUrl))
                     {
-                        Console.WriteLine($"[MS.Pagamento] Request sent to Mock");
+                        Console.WriteLine($"[MS.Pagamento] Checkout URL received from Mock: {cobranca.CheckoutUrl}");
+
+                        // Publish the checkout URL so the gateway can send it to the client over SSE
+                        var pendente = new PagamentoPendente
+                        {
+                            PedidoId = eventMessage.Content.Id,
+                            ClienteId = eventMessage.Content.ClienteId,
+                            ValorTotal = eventMessage.Content.ValorTotal,
+                            CheckoutUrl = cobranca.CheckoutUrl
+                        };
+
+                        using var scope = _scopeFactory.CreateScope();
+                        var publisher = scope.ServiceProvider.GetRequiredService<RabbitMqPublisher>();
+                        await publisher.PublishEventAsync(pendente, "pagamento.pendente");
                     }
                     else
                     {

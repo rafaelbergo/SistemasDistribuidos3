@@ -17,6 +17,7 @@ string privateKeyPath = Path.Combine(solutionRootPath, "MS.Pagamento", "Keys", "
 builder.Services.AddSingleton(signature);
 builder.Services.AddSingleton(new KeyConfig
 {
+    ProducerName = "MS.Pagamento",
     PrivateKeyPath = privateKeyPath,
     SolutionRootPath = solutionRootPath
 });
@@ -31,7 +32,7 @@ builder.Services.AddHostedService<PagamentoConsumerService>();
 
 builder.Services.AddHttpClient("MockPagamentoClient", client =>
 {
-    client.BaseAddress = new Uri("https://localhost:6000/");
+    client.BaseAddress = new Uri("http://localhost:5300/");
 });
 
 builder.Services.AddControllers();

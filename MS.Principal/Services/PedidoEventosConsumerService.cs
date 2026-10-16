@@ -1,6 +1,7 @@
 using Foundation;
 using Foundation.Keys;
 using Foundation.Models;
+using Foundation.Services;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
@@ -16,6 +17,7 @@ public class PedidoEventosConsumerService : BackgroundService
     private readonly SignatureService _signatureService;
     private readonly KeyConfig _keyConfig;
     private readonly PedidoEventosHub _hub;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     private static readonly string[] RoutingKeys =
     [
@@ -27,12 +29,13 @@ public class PedidoEventosConsumerService : BackgroundService
         "pedido.enviado",
     ];
 
-    public PedidoEventosConsumerService(IConnection connection, SignatureService signatureService, KeyConfig keyConfig, PedidoEventosHub hub)
+    public PedidoEventosConsumerService(IConnection connection, SignatureService signatureService, KeyConfig keyConfig, PedidoEventosHub hub, IServiceScopeFactory scopeFactory)
     {
         _connection = connection;
         _signatureService = signatureService;
         _keyConfig = keyConfig;
         _hub = hub;
+        _scopeFactory = scopeFactory;
     }
 
     protected override async Task ExecuteAsync(CancellationToken ct)
@@ -66,7 +69,7 @@ public class PedidoEventosConsumerService : BackgroundService
         }
 
         var consumer = new AsyncEventingBasicConsumer(channel);
-        consumer.ReceivedAsync += (model, ea) =>
+        consumer.ReceivedAsync += async (model, ea) =>
         {
             string routingKey = ea.RoutingKey;
             string jsonReceiverMessage = Encoding.UTF8.GetString(ea.Body.ToArray());
@@ -75,14 +78,12 @@ public class PedidoEventosConsumerService : BackgroundService
 
             try
             {
-                ProcessarEvento(routingKey, jsonReceiverMessage);
+                await ProcessarEventoAsync(routingKey, jsonReceiverMessage);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[MS.Principal] Error on process {routingKey}: {ex.Message}");
             }
-
-            return Task.CompletedTask;
         };
 
         await channel.BasicConsumeAsync(
@@ -95,7 +96,7 @@ public class PedidoEventosConsumerService : BackgroundService
         await Task.Delay(Timeout.Infinite, ct);
     }
 
-    private void ProcessarEvento(string routingKey, string json)
+    private async Task ProcessarEventoAsync(string routingKey, string json)
     {
         if (routingKey == "pagamento.pendente")
         {
@@ -125,6 +126,14 @@ public class PedidoEventosConsumerService : BackgroundService
 
             var pedido = message.Content;
             _hub.Publicar(pedido.ClienteId, new PedidoStatusEvento(pedido.Id, status, mensagem, null, message.Timestamp));
+
+            // Refused payment cancels the order, so MS.Estoque releases the reserved items
+            if (routingKey == "pagamento.recusado")
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var publisher = scope.ServiceProvider.GetRequiredService<RabbitMqPublisher>();
+                await publisher.PublishEventAsync(pedido, "pedido.excluido");
+            }
         }
     }
 

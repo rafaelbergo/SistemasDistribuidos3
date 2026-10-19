@@ -9,7 +9,8 @@ using System.Text.Json;
 Console.Title = "MS.Entrega";
 
 // Set base paths and verify if keys exist
-string solutionRootPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+string solutionRootPath = Environment.GetEnvironmentVariable("SOLUTION_ROOT_PATH")
+    ?? Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 string privateKeyPath = Path.Combine(solutionRootPath, "MS.Entrega", "Keys", "MS.Entrega.private.pem");
 
 var keyManagement = new KeyManagement(solutionRootPath, "MS.Entrega");
@@ -18,6 +19,8 @@ var signatureService = new SignatureService();
 
 // RabbitMQ Connection
 var factory = new ConnectionFactory { HostName = "localhost" };
+if (Environment.GetEnvironmentVariable("RabbitMq__Uri") is { } rabbitUri)
+    factory.Uri = new Uri(rabbitUri);
 using var connection = await factory.CreateConnectionAsync();
 using var channel = await connection.CreateChannelAsync();
 

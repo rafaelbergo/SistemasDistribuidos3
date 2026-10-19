@@ -23,23 +23,28 @@ public class WebhookController : ControllerBase
     {
         Console.WriteLine($"[MS.Pagamento] Webhook received for OrderId: {payload.PedidoId}, status: {payload.Status}");
 
-        // Check if Order exists
-        if (!_pagamentoManager.PedidosPendentes.TryRemove(payload.PedidoId, out var pedido))
+        string? status = payload.Status?.Trim().ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(payload.PedidoId) || status is not ("APROVADO" or "RECUSADO"))
+            return BadRequest("PedidoId and status APROVADO or RECUSADO are required.");
+
+        ResultadoPagamento resultado;
+        try
         {
-            Console.WriteLine($"[MS.Pagamento] Error: Order already processed or not found");
-            return NotFound("Order not found or already processed.");
+            resultado = await _pagamentoManager.ProcessarAsync(payload.PedidoId, status,
+                (pedido, routingKey) => _rabbitPublisher.PublishEventAsync(pedido, routingKey));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MS.Pagamento] Failed to publish payment: {ex.Message}");
+            return StatusCode(503, "Payment notification unavailable. Retry the webhook.");
         }
 
-        // Publish event to RabbitMQ based on the payment status
-        if (payload.Status.Equals("APROVADO", StringComparison.OrdinalIgnoreCase))
+        return resultado switch
         {
-            await _rabbitPublisher.PublishEventAsync(pedido, "pagamento.aprovado");
-        }
-        else
-        {
-            await _rabbitPublisher.PublishEventAsync(pedido, "pagamento.recusado");
-        }
-
-        return Ok("Webhook processed with success");
+            ResultadoPagamento.NaoEncontrado => NotFound("Order not found."),
+            ResultadoPagamento.Conflito => Conflict("Order already processed with a different status."),
+            ResultadoPagamento.Repetido => Ok("Webhook already processed."),
+            _ => Ok("Webhook processed with success")
+        };
     }
 }

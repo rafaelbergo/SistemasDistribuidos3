@@ -23,6 +23,8 @@ builder.Services.AddSingleton(new KeyConfig
 });
 
 var factory = new ConnectionFactory { HostName = "localhost" };
+if (builder.Configuration["RabbitMq:Uri"] is { } rabbitUri)
+    factory.Uri = new Uri(rabbitUri);
 var rabbitConnection = await factory.CreateConnectionAsync();
 builder.Services.AddSingleton(rabbitConnection);
 builder.Services.AddScoped<RabbitMqPublisher>();
@@ -32,7 +34,7 @@ builder.Services.AddHostedService<PagamentoConsumerService>();
 
 builder.Services.AddHttpClient("MockPagamentoClient", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5300/");
+    client.BaseAddress = new Uri(builder.Configuration["Pagamento:MockUrl"] ?? "http://localhost:5300/");
 });
 
 builder.Services.AddControllers();

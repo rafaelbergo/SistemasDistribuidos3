@@ -23,6 +23,8 @@ builder.Services.AddSingleton(new KeyConfig
 });
 
 var factory = new ConnectionFactory { HostName = "localhost" };
+if (builder.Configuration["RabbitMq:Uri"] is { } rabbitUri)
+    factory.Uri = new Uri(rabbitUri);
 var rabbitConnection = await factory.CreateConnectionAsync();
 builder.Services.AddSingleton(rabbitConnection);
 builder.Services.AddScoped<RabbitMqPublisher>();
@@ -32,7 +34,7 @@ builder.Services.AddHostedService<PedidoEventosConsumerService>();
 
 builder.Services.AddHttpClient("EstoqueClient", client =>
 {
-    client.BaseAddress = new Uri("https://localhost:7072/");
+    client.BaseAddress = new Uri(builder.Configuration["Estoque:Url"] ?? "https://localhost:7072/");
 });
 
 builder.Services.AddControllers();

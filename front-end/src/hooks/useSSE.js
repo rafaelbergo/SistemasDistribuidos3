@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 // Non-JSON payloads are kept under { raw }.
 export function useSSE(url, { enabled = true } = {}) {
   const active = enabled && Boolean(url)
-  const [events, setEvents] = useState([])
+  const [received, setReceived] = useState({ url: null, events: [] })
   // Derive the baseline from props; the effect only reports live transitions.
   const [status, setStatus] = useState(active ? 'connecting' : 'idle')
   const sourceRef = useRef(null)
@@ -28,7 +28,10 @@ export function useSSE(url, { enabled = true } = {}) {
       } catch {
         data = { raw: event.data }
       }
-      setEvents((prev) => [...prev, { ...data, receivedAt: new Date().toISOString() }])
+      setReceived((prev) => ({
+        url,
+        events: [...(prev.url === url ? prev.events : []), { ...data, receivedAt: new Date().toISOString() }],
+      }))
     }
 
     // EventSource retries automatically; we only reflect the degraded state.
@@ -41,7 +44,7 @@ export function useSSE(url, { enabled = true } = {}) {
     }
   }, [url, active])
 
-  const clear = () => setEvents([])
+  const clear = () => setReceived({ url, events: [] })
 
-  return { events, status, clear }
+  return { events: received.url === url ? received.events : [], status: active ? status : 'idle', clear }
 }

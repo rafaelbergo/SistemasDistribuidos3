@@ -12,6 +12,11 @@
   <Folder Name="/External/">
     <Project Path="Mock.Pagamento/Mock.Pagamento.csproj" />
   </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="tests/Email.Regression/Email.Regression.csproj" />
+    <Project Path="tests/Interesses.Regression/Interesses.Regression.csproj" />
+    <Project Path="tests/Pagamento.Regression/Pagamento.Regression.csproj" />
+  </Folder>
   <Project Path="Foundation/Foundation.csproj" />
   <Project Path="MS.Principal/MS.Principal.csproj" Id="6b8f028e-e45d-4b18-9da0-3183d00cb7d4" />
 </Solution>

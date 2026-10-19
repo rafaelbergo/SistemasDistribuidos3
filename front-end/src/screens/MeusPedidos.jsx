@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react'
-import { pedidoEventsUrl } from '../api/client'
 import { useCliente } from '../context/ClienteContext'
 import { usePedidos } from '../context/PedidosContext'
-import { useSSE } from '../hooks/useSSE'
 import { statusLabel, statusStyle } from '../api/status'
 import { formatBRL } from '../utils/format'
 import { isEmailValido } from '../utils/validation'
@@ -22,7 +20,7 @@ function horaDe(ev) {
 
 export default function MeusPedidos() {
   const { clienteId, setClienteId } = useCliente()
-  const { pedidos } = usePedidos()
+  const { pedidos, events, status } = usePedidos()
   const [emailInput, setEmailInput] = useState('')
   const [erroEmail, setErroEmail] = useState(null)
 
@@ -36,9 +34,6 @@ export default function MeusPedidos() {
     setClienteId(mail)
   }
 
-  const url = clienteId ? pedidoEventsUrl(clienteId) : null
-  const { events, status } = useSSE(url, { enabled: Boolean(clienteId) })
-
   const eventsByPedido = useMemo(() => {
     const map = new Map()
     for (const ev of events) {
@@ -51,14 +46,14 @@ export default function MeusPedidos() {
 
   const orders = useMemo(() => {
     const byId = new Map()
-    pedidos.forEach((p, idx) => {
+    pedidos.filter((p) => p.clienteId?.toLowerCase() === clienteId.toLowerCase()).forEach((p, idx) => {
       byId.set(p.pedidoId ?? `local-${idx}`, { ...p })
     })
     for (const id of eventsByPedido.keys()) {
       if (id !== '—' && !byId.has(id)) byId.set(id, { pedidoId: id })
     }
     return Array.from(byId.entries()).map(([key, p]) => ({ key, ...p }))
-  }, [pedidos, eventsByPedido])
+  }, [pedidos, eventsByPedido, clienteId])
 
   if (!clienteId) {
     return (

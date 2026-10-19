@@ -57,7 +57,7 @@ export function criarPedido(pedido) {
   })
 }
 
-// --- Promoções (contrato esperado; backend ainda vai expor) ---
+// --- Promoções (Gateway publica a solicitação no RabbitMQ) ---
 
 // POST /api/interesse  body: { email, categorias: ["A", "B", ...] }
 export function registrarInteresse(interesse) {

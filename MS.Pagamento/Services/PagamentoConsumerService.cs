@@ -17,8 +17,9 @@ public class PagamentoConsumerService : BackgroundService
     private readonly PagamentoManager _pagamentoManager;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IConfiguration _configuration;
 
-    public PagamentoConsumerService(IConnection connection, SignatureService signatureService, KeyConfig keyConfig, PagamentoManager pagamentoManager, IHttpClientFactory httpClientFactory, IServiceScopeFactory scopeFactory)
+    public PagamentoConsumerService(IConnection connection, SignatureService signatureService, KeyConfig keyConfig, PagamentoManager pagamentoManager, IHttpClientFactory httpClientFactory, IServiceScopeFactory scopeFactory, IConfiguration configuration)
     {
         _connection = connection;
         _signatureService = signatureService;
@@ -26,6 +27,7 @@ public class PagamentoConsumerService : BackgroundService
         _pagamentoManager = pagamentoManager;
         _httpClientFactory = httpClientFactory;
         _scopeFactory = scopeFactory;
+        _configuration = configuration;
     }
 
     protected override async Task ExecuteAsync(CancellationToken ct)
@@ -78,12 +80,13 @@ public class PagamentoConsumerService : BackgroundService
             if (routingKey == "pedido.estoque_ok")
             {
                 // Save Order in memory waiting for the webhook
-                _pagamentoManager.PedidosPendentes.TryAdd(eventMessage.Content.Id, eventMessage.Content);
+                if (!_pagamentoManager.Registrar(eventMessage.Content))
+                    return;
                 Console.WriteLine($"[MS.Pagamento] Order {eventMessage.Content.Id} awaiting payment");
 
                 // Call Mock Payment API to create the payment request
                 var client = _httpClientFactory.CreateClient("MockPagamentoClient");
-                string myWebhookUrl = "http://localhost:5207/api/webhook";
+                string myWebhookUrl = _configuration["Pagamento:WebhookUrl"] ?? "http://localhost:5207/api/webhook";
 
                 var mockRequest = new SolicitacaoPagamentoMock(
                     PedidoId: eventMessage.Content.Id,

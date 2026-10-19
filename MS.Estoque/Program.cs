@@ -21,6 +21,8 @@ builder.Services.AddSingleton(new KeyConfig
 });
 
 var factory = new ConnectionFactory { HostName = "localhost" };
+if (builder.Configuration["RabbitMq:Uri"] is { } rabbitUri)
+    factory.Uri = new Uri(rabbitUri);
 var rabbitConnection = await factory.CreateConnectionAsync();
 builder.Services.AddSingleton(rabbitConnection);
 

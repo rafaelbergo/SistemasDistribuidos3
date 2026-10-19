@@ -21,7 +21,8 @@ public class RabbitMqPublisher
 
     public async Task PublishEventAsync<T>(T conteudo, string routingKey, string exchange = "eCommerce")
     {
-        await using var channel = await _connection.CreateChannelAsync();
+        await using var channel = await _connection.CreateChannelAsync(
+            new CreateChannelOptions(publisherConfirmationsEnabled: true, publisherConfirmationTrackingEnabled: true));
 
         await channel.ExchangeDeclareAsync(exchange: exchange, type: ExchangeType.Direct, durable: true);
 
@@ -40,6 +41,8 @@ public class RabbitMqPublisher
         await channel.BasicPublishAsync(
             exchange: exchange,
             routingKey: routingKey,
+            mandatory: true,
+            basicProperties: new BasicProperties { Persistent = true },
             body: body
         );
 

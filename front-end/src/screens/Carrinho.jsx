@@ -9,7 +9,7 @@ import { isEmailValido } from '../utils/validation'
 export default function Carrinho({ navigate }) {
   const { items, setQuantidade, removeItem, clear, totalItens, totalValor } = useCart()
   const { clienteId, setClienteId } = useCliente()
-  const { addPedido } = usePedidos()
+  const { addPedido, iniciarCheckout } = usePedidos()
 
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState(null)
@@ -28,11 +28,15 @@ export default function Carrinho({ navigate }) {
       return
     }
 
+    if (enviando || items.length === 0) return
+    const checkout = iniciarCheckout()
     setEnviando(true)
     try {
       const itensPayload = items.map((i) => ({ id: i.id, quantidade: i.quantidade }))
       const resp = await criarPedido({ clienteId: cliente, itens: itensPayload })
       const pedidoId = resp?.pedidoId ?? null
+      if (!pedidoId) throw new Error('O servidor não retornou a identificação do pedido.')
+      checkout.associar(pedidoId)
       const valorTotal = Number.isFinite(resp?.totalValue) ? resp.totalValue : totalValor
 
       addPedido({
@@ -44,6 +48,7 @@ export default function Carrinho({ navigate }) {
       clear()
       setSucesso({ pedidoId, valorTotal })
     } catch (e) {
+      checkout.cancelar()
       setErro(e.message)
     } finally {
       setEnviando(false)
@@ -63,7 +68,8 @@ export default function Carrinho({ navigate }) {
           <p className="mt-2 text-green-700">
             Acompanhe o status (estoque, pagamento e entrega) em tempo real na aba
             <strong> Meus Pedidos</strong>. A aba de pagamento abrirá quando o checkout
-            estiver disponível.
+            estiver disponível. Se o navegador bloquear a abertura, use o botão
+            “Abrir pagamento em nova aba” em Meus Pedidos.
           </p>
         </div>
         <div className="mt-4 flex gap-2">

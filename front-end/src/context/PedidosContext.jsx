@@ -1,4 +1,8 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { useCliente } from './ClienteContext'
+import { pedidoEventsUrl } from '../api/client'
+import { useSSE } from '../hooks/useSSE'
+import { reservarCheckout } from '../utils/checkout'
 
 const PedidosContext = createContext(null)
 const STORAGE_KEY = 'ecommerce.pedidos'
@@ -18,6 +22,17 @@ function loadInitial() {
 // gives Meus Pedidos something to show immediately after checkout.
 export function PedidosProvider({ children }) {
   const [pedidos, setPedidos] = useState(loadInitial)
+  const { clienteId } = useCliente()
+  // Keep SSE alive while navigating between the cart and other screens.
+  const { events, status } = useSSE(clienteId ? pedidoEventsUrl(clienteId) : null)
+  const abas = useRef(new Map())
+
+  useEffect(() => {
+    for (const [pedidoId, checkout] of abas.current) {
+      if (checkout.atualizar(events.filter((e) => e.pedidoId === pedidoId)))
+        abas.current.delete(pedidoId)
+    }
+  }, [events, pedidos])
 
   useEffect(() => {
     try {
@@ -30,7 +45,15 @@ export function PedidosProvider({ children }) {
   const addPedido = (pedido) =>
     setPedidos((prev) => [{ ...pedido, criadoEm: new Date().toISOString() }, ...prev])
 
-  const value = useMemo(() => ({ pedidos, addPedido }), [pedidos])
+  function iniciarCheckout() {
+    const checkout = reservarCheckout()
+    return {
+      associar: (pedidoId) => abas.current.set(pedidoId, checkout),
+      cancelar: () => checkout.cancelar(),
+    }
+  }
+
+  const value = useMemo(() => ({ pedidos, addPedido, events, status, iniciarCheckout }), [pedidos, events, status])
   return <PedidosContext.Provider value={value}>{children}</PedidosContext.Provider>
 }
 

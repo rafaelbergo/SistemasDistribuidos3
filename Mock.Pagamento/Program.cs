@@ -22,7 +22,9 @@ app.MapPost("/api/cobranca", (SolicitacaoCobranca request, HttpRequest http) =>
         return Results.BadRequest("PedidoId and WebhookUrl are required");
 
     var cobranca = new Cobranca(request.PedidoId, request.ValorTotal, request.WebhookUrl);
-    cobrancas[request.PedidoId] = cobranca;
+    cobranca = cobrancas.GetOrAdd(request.PedidoId, cobranca);
+    if (cobranca.ValorTotal != request.ValorTotal || cobranca.WebhookUrl != request.WebhookUrl)
+        return Results.Conflict("A charge with different data already exists for this order.");
 
     string checkoutUrl = $"{http.Scheme}://{http.Host}/checkout/{Uri.EscapeDataString(request.PedidoId)}";
     Console.WriteLine($"[Mock.Pagamento] Charge created for Order {request.PedidoId}: {checkoutUrl}");
@@ -60,9 +62,6 @@ app.MapPost("/checkout/{pedidoId}/{decisao}", async (string pedidoId, string dec
     if (!cobrancas.TryGetValue(pedidoId, out var cobranca))
         return Pagina("Cobrança não encontrada", "<p>Nenhuma cobrança foi criada para este pedido.</p>", 404);
 
-    if (cobranca.Status != null)
-        return PaginaResultado(cobranca);
-
     string? status = decisao switch
     {
         "aprovar" => "APROVADO",
@@ -72,25 +71,36 @@ app.MapPost("/checkout/{pedidoId}/{decisao}", async (string pedidoId, string dec
     if (status == null)
         return Pagina("Ação inválida", "<p>Use aprovar ou recusar.</p>", 400);
 
+    await cobranca.Lock.WaitAsync();
     try
     {
-        var client = httpClientFactory.CreateClient();
-        var response = await client.PostAsJsonAsync(cobranca.WebhookUrl, new WebhookPayload(cobranca.PedidoId, status));
-        if (!response.IsSuccessStatusCode)
-        {
-            Console.WriteLine($"[Mock.Pagamento] Webhook for Order {pedidoId} failed, status: {response.StatusCode}");
-            return PaginaErroWebhook(cobranca, $"O MS Pagamento respondeu {(int)response.StatusCode}.");
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[Mock.Pagamento] Error on call webhook for Order {pedidoId}: {ex.Message}");
-        return PaginaErroWebhook(cobranca, "Não foi possível contatar o MS Pagamento.");
-    }
+        if (cobranca.Status != null)
+            return PaginaResultado(cobranca);
 
-    cobranca.Status = status;
-    Console.WriteLine($"[Mock.Pagamento] Webhook sent for Order {pedidoId}: {status}");
-    return PaginaResultado(cobranca);
+        try
+        {
+            var client = httpClientFactory.CreateClient();
+            var response = await client.PostAsJsonAsync(cobranca.WebhookUrl, new WebhookPayload(cobranca.PedidoId, status));
+            if (!response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"[Mock.Pagamento] Webhook for Order {pedidoId} failed, status: {response.StatusCode}");
+                return PaginaErroWebhook(cobranca, $"O MS Pagamento respondeu {(int)response.StatusCode}.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Mock.Pagamento] Error on call webhook for Order {pedidoId}: {ex.Message}");
+            return PaginaErroWebhook(cobranca, "Não foi possível contatar o MS Pagamento.");
+        }
+
+        cobranca.Status = status;
+        Console.WriteLine($"[Mock.Pagamento] Webhook sent for Order {pedidoId}: {status}");
+        return PaginaResultado(cobranca);
+    }
+    finally
+    {
+        cobranca.Lock.Release();
+    }
 });
 
 app.Run();
@@ -161,4 +171,5 @@ class Cobranca(string pedidoId, decimal valorTotal, string webhookUrl)
     public decimal ValorTotal { get; } = valorTotal;
     public string WebhookUrl { get; } = webhookUrl;
     public string? Status { get; set; }
+    public SemaphoreSlim Lock { get; } = new(1, 1);
 }

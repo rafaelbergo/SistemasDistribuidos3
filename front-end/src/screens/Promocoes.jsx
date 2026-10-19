@@ -26,7 +26,7 @@ export default function Promocoes() {
 
   async function inscrever() {
     setFeedback(null)
-    const mail = email.trim()
+    const mail = email.trim().toLowerCase()
     if (!isEmailValido(mail)) {
       setFeedback({ tipo: 'erro', msg: 'Informe um e-mail válido (ex.: cliente@email.com).' })
       return
@@ -38,11 +38,13 @@ export default function Promocoes() {
 
     setEnviando(true)
     try {
-      await registrarInteresse({ email: mail, categorias })
+      const resposta = await registrarInteresse({ email: mail, categorias })
+      setEmail(resposta.email)
+      setCategorias(resposta.categorias)
       setClienteId(mail)
       setFeedback({
         tipo: 'ok',
-        msg: `Inscrição registrada para ${mail} nas categorias ${categorias.join(', ')}.`,
+        msg: `Solicitação de inscrição/atualização enviada para ${resposta.email} nas categorias ${resposta.categorias.join(', ')}.`,
       })
     } catch (e) {
       setFeedback({ tipo: 'erro', msg: e.message })
@@ -53,7 +55,7 @@ export default function Promocoes() {
 
   async function cancelar() {
     setFeedback(null)
-    const mail = email.trim()
+    const mail = email.trim().toLowerCase()
     if (!isEmailValido(mail)) {
       setFeedback({ tipo: 'erro', msg: 'Informe um e-mail válido para cancelar.' })
       return
@@ -63,7 +65,7 @@ export default function Promocoes() {
     try {
       await cancelarInteresse(mail)
       setCategorias([])
-      setFeedback({ tipo: 'ok', msg: `Inscrição de ${mail} cancelada.` })
+      setFeedback({ tipo: 'ok', msg: `Solicitação de cancelamento enviada para ${mail}.` })
     } catch (e) {
       setFeedback({ tipo: 'erro', msg: e.message })
     } finally {
@@ -86,7 +88,8 @@ export default function Promocoes() {
           id="promo-email"
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => { setEmail(e.target.value); setFeedback(null) }}
+          disabled={enviando}
           placeholder="cliente@email.com"
           className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
         />
@@ -100,6 +103,7 @@ export default function Promocoes() {
                 key={cat.id}
                 type="button"
                 onClick={() => toggleCategoria(cat.id)}
+                disabled={enviando}
                 aria-pressed={marcada}
                 className={`rounded-lg border p-3 text-left transition-colors ${
                   marcada
@@ -144,7 +148,7 @@ export default function Promocoes() {
             disabled={enviando}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {enviando ? 'Enviando…' : 'Inscrever'}
+            {enviando ? 'Enviando…' : 'Inscrever / atualizar'}
           </button>
           <button
             type="button"

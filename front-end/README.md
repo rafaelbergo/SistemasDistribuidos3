@@ -55,12 +55,12 @@ terminal para cada serviço (inclusive o Mock de Pagamento) já com os ajustes a
 | Catálogo      | Consultar produtos disponíveis (REST)       | ✅ |
 | Carrinho      | Criar pedido (REST) + abrir aba de pagamento| ✅ |
 | Meus Pedidos  | Acompanhar status em tempo real (SSE)       | ✅ |
-| Promoções     | Inscrever/cancelar e-mail por categorias    | ✅ (depende dos endpoints de interesse no backend) |
+| Promoções     | Inscrever, atualizar e cancelar e-mail por categorias | ✅ (Gateway e consumidor implementados) |
 
 ## Contrato da API (Gateway / MS.Principal)
 
-O front-end foi construído contra o contrato abaixo. ✅ = já existe no backend;
-🔧 = **ainda precisa ser implementado no backend** (parte da dupla).
+O front-end utiliza o contrato abaixo. O cadastro de interesses e o envio de
+promoções por e-mail estão implementados. Configure a API de e-mail no MS.Promocoes.
 
 ### ✅ `GET /api/catalogo`
 Lista produtos disponíveis (gateway consulta o MS.Estoque via REST).
@@ -117,14 +117,26 @@ Sistema externo que simula o provedor de pagamentos:
 - Ao clicar, faz `POST` no `webhookUrl` (`http://localhost:5207/api/webhook` do
   MS.Pagamento) com `{ pedidoId, status: "APROVADO" | "RECUSADO" }`.
 
-### 🔧 `POST /api/interesse`
-Registra interesse em promoções e publica `interesse.promocao`.
+### `POST /api/interesse`
+Registra ou substitui as categorias de interesse de um e-mail e publica
+`interesse.promocao`, com assinatura digital. Responde HTTP 202 com e-mail e
+categorias normalizados; o MS.Promocoes processa e persiste o cadastro de forma
+assíncrona. Categorias permitidas: A, B e C. Dados inválidos retornam 400;
+falha no encaminhamento retorna 503.
 ```json
 { "email": "cliente@email.com", "categorias": ["A", "B"] }
 ```
 
-### 🔧 `DELETE /api/interesse/{email}`
-Cancela o interesse em receber e-mails de promoções.
+### `DELETE /api/interesse/{email}`
+Publica `interesse.cancelado` e responde HTTP 202. O MS.Promocoes remove a
+inscrição; repetir o cancelamento é permitido. O e-mail deve estar codificado
+no caminho da URL, como já faz o cliente REST.
+
+O MS.Promocoes precisa estar iniciado ao menos uma vez para declarar a fila de
+interesses. Os cadastros ficam em `MS.Promocoes/Dados/interesses.json`, fora do Git.
+Consulte `../tests/INTERESSES.md` para testar e executar o consumidor sem menu.
+O disparo por API externa de e-mail está implementado; veja configuração e testes
+em `../MS.Promocoes/README.md`.
 
 ## Estrutura
 

@@ -14,6 +14,28 @@ string directory = Path.Combine(scratchRoot, Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(directory);
 try
 {
+    string[] variaveis = ["Email__ApiKey", "RESEND_API_KEY", "Email__From", "Email__Endpoint"];
+    var anteriores = variaveis.ToDictionary(nome => nome, Environment.GetEnvironmentVariable);
+    try
+    {
+        foreach (string nome in variaveis) Environment.SetEnvironmentVariable(nome, null);
+        string configuracao = Path.Combine(directory, "appsettings.json");
+        File.WriteAllText(configuracao, """{"Email":{"ApiKey":"json-test-key","From":"Loja <loja@example.com>","Endpoint":"http://localhost/emails"}}""");
+        var carregado = EmailOptions.Carregar(configuracao);
+        Check(carregado.Configurado && carregado.ApiKey == "json-test-key" && carregado.From == "Loja <loja@example.com>", "JSON configuration must be loaded");
+        Environment.SetEnvironmentVariable("RESEND_API_KEY", "alias-test-key");
+        Check(EmailOptions.Carregar(configuracao).ApiKey == "alias-test-key", "Environment alias must override JSON");
+        Environment.SetEnvironmentVariable("Email__ApiKey", "env-test-key");
+        Check(EmailOptions.Carregar(configuracao).ApiKey == "env-test-key", "Email environment key must take precedence");
+        foreach (string nome in variaveis) Environment.SetEnvironmentVariable(nome, null);
+        Check(!EmailOptions.Carregar(Path.Combine(directory, "missing.json")).Configurado, "Missing settings file must remain optional");
+        Console.WriteLine("PASS: appsettings.json loading, environment precedence and optional file");
+    }
+    finally
+    {
+        foreach (var item in anteriores) Environment.SetEnvironmentVariable(item.Key, item.Value);
+    }
+
     var store = new InteressesStore(Path.Combine(directory, "interesses.json"));
     store.Aplicar(new() { Email = "a@example.com", Categorias = ["A"] }, "a");
     store.Aplicar(new() { Email = "b@example.com", Categorias = ["B"] }, "b");

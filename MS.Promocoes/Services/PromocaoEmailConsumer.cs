@@ -28,7 +28,7 @@ public sealed class PromocaoEmailConsumer(IConnection connection, PromocaoEmailD
         await _channel.QueueBindAsync("fila_email_promocoes", "Promoções", "promocao.categoria.*");
         if (!configurado)
         {
-            Console.WriteLine("[MS.Promocoes] E-mail aguardando configuração: Email__ApiKey e Email__From. Promoções permanecerão na fila.");
+            Console.WriteLine("[MS.Promocoes] E-mail aguardando configuração: Email.ApiKey e Email.From no appsettings.json ou nas variáveis de ambiente. Promoções permanecerão na fila.");
             return;
         }
         await _channel.BasicQosAsync(0, 1, false);

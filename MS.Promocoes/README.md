@@ -6,9 +6,22 @@ exclusiva recebe essas mensagens e envia e-mails somente aos inscritos na catego
 
 ## Configurar e executar
 
-Configure a chave de API e um remetente autorizado na sua conta Resend. As variáveis
-precisam estar no ambiente do processo do MS.Promocoes; elas não são expostas ao
-front-end nem gravadas no código. Exemplo no PowerShell, na raiz do repositório:
+Preencha `MS.Promocoes/appsettings.json`, que é um arquivo local ignorado pelo Git:
+
+```json
+{
+  "Email": {
+    "ApiKey": "SUA_CHAVE_RESEND",
+    "From": "Minha Loja <promocoes@seu-dominio.com>",
+    "Endpoint": "https://api.resend.com/emails"
+  }
+}
+```
+
+O arquivo é copiado para a saída ao compilar. Depois de editar, inicie novamente
+com `dotnet run --project MS.Promocoes`. Se o arquivo não existir, o serviço ainda
+aceita configuração por variáveis de ambiente. Elas têm prioridade sobre o JSON
+e não são expostas ao front-end. Exemplo no PowerShell:
 
 ```powershell
 $env:Email__ApiKey = 'SUA_CHAVE_RESEND'

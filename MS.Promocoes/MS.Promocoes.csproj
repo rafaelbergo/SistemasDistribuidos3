@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <Folder Include="Keys\" />
+    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

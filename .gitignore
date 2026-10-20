@@ -5,6 +5,7 @@
 
 # dotenv files
 .env
+/MS.Promocoes/appsettings.json
 MS.Promocoes/Dados/
 
 # User-specific files

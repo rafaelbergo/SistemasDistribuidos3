@@ -11,16 +11,28 @@ public record EmailOptions(string ApiKey, string From, Uri Endpoint, int Interva
 {
     public bool Configurado => !string.IsNullOrWhiteSpace(ApiKey) && !string.IsNullOrWhiteSpace(From);
 
-    public static EmailOptions Carregar()
+    public static EmailOptions Carregar(string? settingsPath = null)
     {
-        var endpoint = new Uri(Environment.GetEnvironmentVariable("Email__Endpoint") ?? "https://api.resend.com/emails");
+        settingsPath ??= Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        using var settings = File.Exists(settingsPath)
+            ? JsonDocument.Parse(File.ReadAllText(settingsPath)) : null;
+        string? Ler(string campo)
+        {
+            if (settings != null && settings.RootElement.TryGetProperty("Email", out var email) &&
+                email.TryGetProperty(campo, out var valor))
+                return valor.GetString();
+            return null;
+        }
+
+        var endpoint = new Uri(Environment.GetEnvironmentVariable("Email__Endpoint")
+            ?? Ler("Endpoint") ?? "https://api.resend.com/emails");
         if (endpoint.Scheme != "https" && !(endpoint.Scheme == "http" && endpoint.IsLoopback))
             throw new ArgumentException("Email__Endpoint deve usar HTTPS (HTTP apenas para testes locais).");
-        string from = Environment.GetEnvironmentVariable("Email__From") ?? "";
+        string from = Environment.GetEnvironmentVariable("Email__From") ?? Ler("From") ?? "";
         if (!string.IsNullOrWhiteSpace(from) && !System.Net.Mail.MailAddress.TryCreate(from, out _))
             throw new ArgumentException("Email__From deve conter um remetente válido.");
         return new(Environment.GetEnvironmentVariable("Email__ApiKey")
-            ?? Environment.GetEnvironmentVariable("RESEND_API_KEY") ?? "", from, endpoint);
+            ?? Environment.GetEnvironmentVariable("RESEND_API_KEY") ?? Ler("ApiKey") ?? "", from, endpoint);
     }
 }
 
@@ -31,7 +43,7 @@ public class ResendEmailSender(HttpClient client, EmailOptions options)
     public async Task<EmailResultado> EnviarAsync(Promocao promocao, string email, string chave,
         Func<bool> aindaInscrito, CancellationToken ct = default)
     {
-        if (!options.Configurado) return new(false, false, "Configure Email__ApiKey e Email__From.");
+        if (!options.Configurado) return new(false, false, "Configure Email.ApiKey e Email.From no appsettings.json ou nas variáveis de ambiente.");
         string desconto = promocao.DescontoPercentual.ToString("0.##", CultureInfo.GetCultureInfo("pt-BR"));
         string assunto = $"{desconto}% OFF: {promocao.Produto}".Replace('\r', ' ').Replace('\n', ' ');
         string texto = $"{promocao.Produto}\nCategoria: {promocao.Categoria}\nDesconto: {desconto}%\n{promocao.Descricao}\n\nGerencie ou cancele sua inscrição na aba Promoções da loja.";
